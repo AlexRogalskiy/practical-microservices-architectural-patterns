@@ -1,0 +1,43 @@
+version: "3.5"
+services:
+  nginx:
+    image: nginx:1.17
+    hostname: nginx
+    ports:
+      - 5671:5671
+    volumes:
+      - ./init/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  rabbit-mq-1:
+    image: rabbitmq:3-management
+    hostname: rabbit-mq-1
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_NODE_PORT: 5672
+      RABBITMQ_NODENAME: rabbit1
+      RABBITMQ_SERVICE_NAME: rabbit1
+      RABBITMQ_SERVER_START_ARGS: -rabbitmq_management listener [{port,15672}]
+      RABBITMQ_ERLANG_COOKIE: 'mycookie'
+  rabbit-mq-2:
+    image: rabbitmq:3-management
+    hostname: rabbit-mq-2
+    ports:
+      - 5673:5673
+      - 15673:15673
+    environment:
+      RABBITMQ_NODE_PORT: 5673
+      RABBITMQ_NODENAME: rabbit2
+      RABBITMQ_SERVICE_NAME: rabbit2
+      RABBITMQ_SERVER_START_ARGS: -rabbitmq_management listener [{port,15673}]
+      RABBITMQ_ERLANG_COOKIE: 'mycookie'
+  rabbit-mq-clusted-setup:
+    image: rabbitmq:3
+    volumes:
+      - ./init/rabbitmq:/init:ro
+    environment:
+      RABBITMQ_ERLANG_COOKIE: 'mycookie'
+    command: bash -c "/init/wait-for-it.sh rabbit-mq-1:5672 && /init/wait-for-it.sh rabbit-mq-2:5673 && /init/rabbitmq-cluster1.sh && /init/rabbitmq-cluster2.sh"
+    depends_on:
+      - rabbit-mq-1
+      - rabbit-mq-2
